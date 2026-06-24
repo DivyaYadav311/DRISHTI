@@ -1,0 +1,102 @@
+[
+  {
+    "product_id": "PMFBY",
+    "name": "Pradhan Mantri Fasal Bima Yojana",
+    "description": "Government-backed crop insurance scheme for farmers against crop loss due to natural calamities, pest attacks, and weather anomalies",
+    "target_segment": "KCC",
+    "eligibility": "KCC holder, agricultural land owner, notified crop grower",
+    "premium": "Kharif: 2%, Rabi: 1.5% of sum insured. Government pays remaining premium",
+    "benefit": "Full compensation for crop loss. Government subsidizes 90%+ of premium cost",
+    "trigger_signals": "weak monsoon, drought, below normal rainfall, flood, pest attack, IMD warning"
+  },
+  {
+    "product_id": "KCC_RESTRUCTURE",
+    "name": "KCC Limit Enhancement and Restructuring",
+    "description": "Increase or restructure the Kisan Credit Card limit based on enhanced crop value or financial stress",
+    "target_segment": "KCC",
+    "eligibility": "Existing KCC holder with minimum 2 years clean repayment history",
+    "premium": "No processing fee. Interest: 4% p.a. with subvention",
+    "benefit": "Higher credit for seeds, fertilizers, equipment. Interest subvention by government",
+    "trigger_signals": "input cost rise, MSP change, crop season start, drought, weak monsoon"
+  },
+  {
+    "product_id": "SBI_REFI",
+    "name": "SBI Home Loan Balance Transfer and Refinancing",
+    "description": "Transfer existing high-interest home loan to SBI's current lower rates after RBI rate cuts",
+    "target_segment": "home_loan",
+    "eligibility": "Existing home loan with any bank, 12+ months clean repayment, property with clear title",
+    "premium": "0.5% processing fee, waived for women borrowers",
+    "benefit": "Reduced EMI burden immediately after RBI rate cut. Save up to ₹3000/month on ₹30L loan",
+    "trigger_signals": "RBI repo rate cut, interest rate reduction, monetary policy, repo rate"
+  },
+  {
+    "product_id": "SBI_TOP_UP",
+    "name": "SBI Home Loan Top-Up",
+    "description": "Additional loan on existing home loan for renovation or emergency needs",
+    "target_segment": "home_loan",
+    "eligibility": "Existing SBI home loan, 24+ months clean repayment, property value appreciation",
+    "premium": "0.35% processing fee",
+    "benefit": "Low-interest funding for home improvement. Disbursed within 3 days",
+    "trigger_signals": "festival season, diwali, renovation spending, property price rise"
+  },
+  {
+    "product_id": "JD_RD",
+    "name": "SBI Jan Dhan Recurring Deposit",
+    "description": "Small-ticket recurring deposit scheme specifically for Jan Dhan account holders to build savings habit",
+    "target_segment": "jan_dhan",
+    "eligibility": "Active Jan Dhan account with at least 3 months transaction history",
+    "premium": "Minimum ₹100/month, no maximum",
+    "benefit": "6.5% interest rate. Builds financial discipline. Qualifies for future loan eligibility",
+    "trigger_signals": "PM-KISAN installment, government salary credit, MNREGA payment, scheme disbursement"
+  },
+  {
+    "product_id": "SBI_SURAKSHA",
+    "name": "Pradhan Mantri Jeevan Jyoti Bima (PMJJBY)",
+    "description": "Low-cost life insurance scheme for Jan Dhan and savings account holders",
+    "target_segment": "jan_dhan",
+    "eligibility": "Age 18-50, active savings/Jan Dhan account, auto-debit consent",
+    "premium": "₹436/year auto-debited from account",
+    "benefit": "₹2 lakh life insurance cover. Family protected at ₹36/month",
+    "trigger_signals": "PM-KISAN credit, government scheme enrollment, low income segment, festival"
+  },
+  {
+    "product_id": "MSME_EMERGENCY",
+    "name": "SBI MSME Emergency Credit Line Guarantee Scheme",
+    "description": "Emergency credit buffer for small businesses facing cash flow stress due to economic disruptions",
+    "target_segment": "MSME",
+    "eligibility": "MSME account with 2+ year SBI relationship, GST registered, turnover < ₹25Cr",
+    "premium": "8.5% interest. No collateral required under ECLGS",
+    "benefit": "Instant credit up to 20% of outstanding or ₹5L max. 12-month moratorium available",
+    "trigger_signals": "sector layoffs, IT slowdown, economic stress, MSME policy, budget MSME provision"
+  },
+  {
+    "product_id": "MSME_MUDRA",
+    "name": "SBI Mudra Loan - Kishor and Tarun Category",
+    "description": "Collateral-free loans for micro and small enterprises for business expansion",
+    "target_segment": "MSME",
+    "eligibility": "Non-farm enterprise, no credit default history, viable business plan",
+    "premium": "10-12% interest. No processing fee under Mudra scheme",
+    "benefit": "₹50,000 to ₹10L without collateral. Government credit guarantee covers default risk",
+    "trigger_signals": "budget MSME announcement, Mudra scheme expansion, interest subsidy, startup news"
+  },
+  {
+    "product_id": "SALARY_ADVANCE",
+    "name": "SBI Salary Pre-Credit Advance",
+    "description": "Short-term advance against upcoming salary for government and corporate employees",
+    "target_segment": "salary",
+    "eligibility": "Salary account with SBI, 6+ months salary history, government or listed company employee",
+    "premium": "10% p.a. interest for 30 days. Zero prepayment penalty",
+    "benefit": "Up to 3x monthly salary in 30 minutes. Auto-repaid on salary credit",
+    "trigger_signals": "government salary delay, end of month, festival advance, emergency"
+  },
+  {
+    "product_id": "SBI_SIP",
+    "name": "SBI Mutual Fund SIP via YONO",
+    "description": "Systematic Investment Plan starting ₹500/month directly from SBI account through YONO app",
+    "target_segment": "salary",
+    "eligibility": "Active SBI savings account, YONO registration, PAN and KYC complete",
+    "premium": "Zero commission. Fund expense ratio 0.5-1.2%",
+    "benefit": "Wealth creation starting ₹500/month. Tax saving under ELSS funds up to ₹1.5L deduction",
+    "trigger_signals": "salary hike, PM-KISAN credit, budget tax savings, mutual fund rally, market opportunity"
+  }
+]
