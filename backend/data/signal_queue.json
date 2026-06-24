@@ -1,26 +1,26 @@
 [
   {
-    "id": "sig_imd_001",
-    "signal_text": "IMD forecasts 23% below normal rainfall over Vidarbha and Marathwada regions during Kharif 2026 season. Drought-like conditions expected by August.",
+    "id": "sig_imd_live_30454",
+    "signal_text": "IMD issues alerts as monsoon revival set to impact 13 states - MSN",
     "source": "IMD",
-    "timestamp": "2026-06-24T06:00:00"
+    "timestamp": "2026-06-24T21:35:26.735718"
   },
   {
-    "id": "sig_rbi_001",
-    "signal_text": "RBI Monetary Policy Committee reduces repo rate by 25 basis points to 6.0%. Home loan and MSME lending rates expected to fall in 2-4 weeks.",
-    "source": "RBI",
-    "timestamp": "2026-06-24T10:00:00"
+    "id": "sig_imd_live_15408",
+    "signal_text": "El Ni\u00f1o forecast increases likelihood of weak monsoon and water stress - Mongabay India",
+    "source": "IMD",
+    "timestamp": "2026-06-24T21:35:26.735730"
   },
   {
-    "id": "sig_pmkisan_001",
-    "signal_text": "PM-KISAN 20th installment of Rs 2000 to be credited to 8.5 crore beneficiary Jan Dhan accounts on August 1, 2026.",
-    "source": "PIB",
-    "timestamp": "2026-06-24T09:00:00"
+    "id": "sig_imd_live_40394",
+    "signal_text": "When Will Monsoon Reach Mumbai? IMD Revises Weather Forecast, Rains Likely by June End; Check Expected Date - Goodreturns",
+    "source": "IMD",
+    "timestamp": "2026-06-24T21:40:06.824512"
   },
   {
-    "id": "sig_msme_001",
-    "signal_text": "Union Budget 2026 expands MSME credit guarantee scheme. Collateral-free loans up to Rs 5 crore now available for registered MSMEs with SBI partnership.",
-    "source": "PIB",
-    "timestamp": "2026-06-24T11:00:00"
+    "id": "sig_imd_live_93210",
+    "signal_text": "IMD issues alerts as monsoon revival set to impact 13 states - MSN",
+    "source": "IMD",
+    "timestamp": "2026-06-24T21:40:06.824530"
   }
 ]

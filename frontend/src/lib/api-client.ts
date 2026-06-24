@@ -22,6 +22,20 @@ export interface JourneyMessage {
   timestamp: string;
 }
 
+export interface CampaignContext {
+  priority: string;
+  explanation: string;
+  customer_profile: {
+    occupation: string;
+    credit_score: number | null;
+    farm_size: number | null;
+    crop_type: string | null;
+    business_type: string | null;
+    income_bracket: string;
+    existing_loans: string;
+  };
+}
+
 export interface Journey {
   journey_id: string;
   customer_id: string;
@@ -40,6 +54,7 @@ export interface Journey {
   channel: string;
   tone: string;
   status: "pending" | "active" | "converted" | "dropped";
+  campaign_context?: CampaignContext;
   created_at: string;
   converted_at: string | null;
   messages: JourneyMessage[];
@@ -63,7 +78,38 @@ export interface StatsResult {
   active_conversations: number;
   converted: number;
   conversion_rate: number;
+  signals_in_queue: number;
   channels: { sms: number; yono: number; rm_alert: number };
+}
+
+export interface CustomerRecord {
+  id: string;
+  name: string;
+  age: number;
+  state: string;
+  district: string;
+  language: string;
+  account_types: string[];
+  kcc_limit: number;
+  loan_amount: number;
+  income_bracket: string;
+  repayment_status: string;
+  dependents: number;
+  digital_access: string;
+  salary_source: string | null;
+  occupation: string;
+  business_type: string | null;
+  farm_size: number | null;
+  crop_type: string | null;
+  credit_score: number | null;
+  existing_loans: string;
+}
+
+export interface FetchSignalsResult {
+  success: boolean;
+  fetched: number;
+  new_added: number;
+  signals: RawSignal[];
 }
 
 /* ─── API Functions ────────────────────────────────────────── */
@@ -90,6 +136,21 @@ export function checkHealth() {
 /** Get all available signals from the queue */
 export function fetchSignals() {
   return apiFetch<{ signals: RawSignal[] }>("/api/signals");
+}
+
+/** Fetch fresh signals from live crawlers */
+export function triggerSignalFetch() {
+  return apiFetch<FetchSignalsResult>("/api/signals/fetch", {
+    method: "POST",
+  });
+}
+
+/** Run a specific signal through the pipeline (background) */
+export function runSignalById(signalId: string) {
+  return apiFetch<{ status: string; signal_id: string; signal_text: string }>(
+    `/api/signals/${signalId}/run`,
+    { method: "POST" }
+  );
 }
 
 /** Get the SBI product catalog */
@@ -134,4 +195,21 @@ export function fetchJourney(journeyId: string) {
 /** Get pipeline stats */
 export function fetchStats() {
   return apiFetch<StatsResult>("/api/stats");
+}
+
+/** Get customers from the database */
+export function fetchCustomers(filters?: { segment?: string; state?: string; limit?: number }) {
+  const params = new URLSearchParams();
+  if (filters?.segment) params.set("segment", filters.segment);
+  if (filters?.state) params.set("state", filters.state);
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  const qs = params.toString();
+  return apiFetch<{ customers: CustomerRecord[]; total: number }>(
+    `/api/customers${qs ? `?${qs}` : ""}`
+  );
+}
+
+/** Get a single customer profile */
+export function fetchCustomer(customerId: string) {
+  return apiFetch<{ customer: CustomerRecord }>(`/api/customers/${customerId}`);
 }

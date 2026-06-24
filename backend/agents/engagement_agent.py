@@ -20,28 +20,40 @@ LANGUAGE_DISPLAY = {
 }
 
 
-def generate_opening_message(customer: dict, signal: dict, product: dict) -> dict:
+def generate_opening_messages_batch(customers: list, signal: dict, products_map: dict) -> list:
     """
-    Generates the first proactive message from DRISHTI to the customer.
-    Returns {message, message_english}.
+    Generates the first proactive message from DRISHTI to a batch of customers in one LLM call.
+    Returns list of message dicts.
     """
-    language = customer.get("language", "hindi")
-    lang_display = LANGUAGE_DISPLAY.get(language, "Hindi")
+    if not customers:
+        return []
+
+    # Prepare lightweight customer data for prompt
+    customers_data = []
+    for c in customers:
+        lang = c.get("language", "hindi")
+        product_id = c.get("recommended_product", "")
+        product = products_map.get(product_id, {})
+        
+        customers_data.append({
+            "id": c.get("id"),
+            "name": c.get("name", "Customer"),
+            "language": LANGUAGE_DISPLAY.get(lang, "Hindi"),
+            "channel": c.get("channel", "sms"),
+            "tone": c.get("tone", "informative"),
+            "product_name": product.get("name", product_id),
+            "product_benefit": product.get("benefit", "")
+        })
 
     prompt = ENGAGEMENT_OPENING_PROMPT.format(
         signal_text=signal.get("signal_text", ""),
-        customer_name=customer.get("name", "Customer"),
-        product_name=product.get("name", ""),
-        product_benefit=product.get("benefit", ""),
-        tone=customer.get("tone", "informative"),
-        language=lang_display,
-        channel=customer.get("channel", "sms")
+        customers_data=json.dumps(customers_data, indent=2)
     )
 
     try:
         raw_text = call_llm(
             user_message=prompt,
-            max_tokens=400,
+            max_tokens=2000,
         )
 
         if raw_text.startswith("```"):
@@ -49,14 +61,14 @@ def generate_opening_message(customer: dict, signal: dict, product: dict) -> dic
             if raw_text.startswith("json"):
                 raw_text = raw_text[4:]
 
-        return json.loads(raw_text.strip())
+        results = json.loads(raw_text.strip())
+        if not isinstance(results, list):
+            results = [results]
+        return results
 
     except Exception as e:
-        print(f"[EngagementAgent] Opening message failed for {customer['id']}: {e}")
-        return {
-            "message": f"Namaste {customer.get('name', '')} ji. Kya aap hamare naye offer ke baare mein jaanna chahenge?",
-            "message_english": f"Hello {customer.get('name', '')}. Would you like to know about our new offer?"
-        }
+        print(f"[EngagementAgent] Batch opening messages failed: {e}")
+        return []
 
 
 def run_engagement_agent(state: dict) -> dict:
@@ -72,23 +84,65 @@ def run_engagement_agent(state: dict) -> dict:
         return {"journeys": [], "enriched_signal": signal}
 
     journeys = []
+    
+    # 1. Fetch products for all customers to create a products_map
+    products_map = {}
+    for customer in customers:
+        p_id = customer.get("recommended_product", "")
+        if p_id and p_id not in products_map:
+            p_data = get_product_by_id(p_id)
+            if not p_data:
+                p_data = {
+                    "product_id": p_id,
+                    "name": p_id.replace("_", " ").title(),
+                    "benefit": "Financial protection and support",
+                    "description": "",
+                    "eligibility": ""
+                }
+            products_map[p_id] = p_data
+
+    # 2. Batch generate opening messages
+    print(f"[EngagementAgent] Batch generating opening messages for {len(customers)} customers...")
+    batch_results = generate_opening_messages_batch(customers, signal, products_map)
+    
+    # Create lookup map
+    msg_map = {res.get("customer_id"): res for res in batch_results if isinstance(res, dict)}
 
     for customer in customers:
         product_id = customer.get("recommended_product", "")
-        product = get_product_by_id(product_id)
+        product = products_map.get(product_id, {})
 
-        if not product:
-            # Fallback product shell
-            product = {
-                "product_id": product_id,
-                "name": product_id.replace("_", " ").title(),
-                "benefit": "Financial protection and support",
-                "description": "",
-                "eligibility": ""
+        # Build campaign context (from Drishti_Backend's campaign_orchestrator + explanation_agent)
+        segment = signal.get("affected_segment", "all")
+        priority = "HIGH" if segment in ("KCC",) else "MEDIUM" if segment in ("MSME", "home_loan") else "LOW"
+
+        campaign_context = {
+            "priority": priority,
+            "explanation": (
+                f"Signal: {signal.get('signal_text', '')[:120]}. "
+                f"Customer {customer.get('name', '')} ({customer.get('occupation', 'N/A')}) "
+                f"matched via {segment} segment in {customer.get('district', 'N/A')}, "
+                f"{customer.get('state', 'N/A')}. "
+                f"Recommended {product.get('name', product_id)} due to: {customer.get('reasoning', 'profile match')}."
+            ),
+            "customer_profile": {
+                "occupation": customer.get("occupation", "N/A"),
+                "credit_score": customer.get("credit_score"),
+                "farm_size": customer.get("farm_size"),
+                "crop_type": customer.get("crop_type"),
+                "business_type": customer.get("business_type"),
+                "income_bracket": customer.get("income_bracket", "N/A"),
+                "existing_loans": customer.get("existing_loans", "None"),
+            },
+        }
+
+        # Get generated message from map, fallback if missing
+        msg_data = msg_map.get(customer["id"])
+        if not msg_data:
+            msg_data = {
+                "message": f"Namaste {customer.get('name', '')} ji. Kya aap hamare naye offer ke baare mein jaanna chahenge?",
+                "message_english": f"Hello {customer.get('name', '')}. Would you like to know about our new offer?"
             }
-
-        # Generate the opening outreach message
-        msg_data = generate_opening_message(customer, signal, product)
 
         journey = {
             "journey_id": f"j_{uuid.uuid4().hex[:8]}",
@@ -108,13 +162,14 @@ def run_engagement_agent(state: dict) -> dict:
             "channel": customer.get("channel", "sms"),
             "tone": customer.get("tone", "informative"),
             "status": "pending",
+            "campaign_context": campaign_context,
             "created_at": datetime.now().isoformat(),
             "converted_at": None,
             "messages": [
                 {
                     "role": "drishti",
-                    "text": msg_data["message"],
-                    "text_english": msg_data["message_english"],
+                    "text": msg_data.get("message", ""),
+                    "text_english": msg_data.get("message_english", ""),
                     "timestamp": datetime.now().isoformat()
                 }
             ]

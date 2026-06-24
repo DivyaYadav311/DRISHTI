@@ -5,39 +5,47 @@ from datetime import datetime
 def start_scheduler():
     """
     Spawns a daemon thread that polls the system clock.
-    Triggers the crawl and pipeline loop at exactly 6:00 AM daily.
+    Triggers the crawl and pipeline loop every 5 minutes.
     """
     def scheduler_loop():
-        print("[Scheduler] Daily 6 AM scheduler thread started.")
+        print("[Scheduler] Automated background loop started. Polling every 5 minutes.")
+        
+        from main import SIGNALS_PATH, _journeys
+        from ingest.crawlers import crawl_all_signals, save_signals_to_queue
+        from run_pipeline import run_pipeline
+
         while True:
-            now = datetime.now()
-            
-            # Wakes up at 6:00 AM
-            if now.hour == 6 and now.minute == 0:
-                print(f"[Scheduler] Clock reached 6:00 AM. Ingesting signals...")
-                try:
-                    from ingest.crawlers import crawl_all_signals
-                    from run_pipeline import run_pipeline
-                    from main import _journeys  # runtime import to prevent circular dependency
+            try:
+                print(f"[Scheduler] Running automated signal crawl at {datetime.now().strftime('%H:%M:%S')}...")
+                
+                # Fetch new signals
+                raw_signals = crawl_all_signals()
+                new_added = save_signals_to_queue(raw_signals, SIGNALS_PATH)
+                
+                if new_added:
+                    print(f"[Scheduler] Found {len(new_added)} new signals! Auto-running pipeline...")
                     
-                    raw_signals = crawl_all_signals()
-                    for sig in raw_signals:
+                    for sig in new_added:
                         print(f"[Scheduler] Injecting signal into DRISHTI: {sig['id']}")
                         result = run_pipeline(sig)
                         
-                        # Store in FastAPI in-memory store for dashboard and simulator APIs
+                        # Store in FastAPI in-memory store for dashboard
                         for journey in result.get("journeys", []):
                             _journeys[journey["journey_id"]] = journey
                             print(f"[Scheduler] Live journey created: {journey['journey_id']} for {journey['customer_name']}")
-                            
-                except Exception as e:
-                    print(f"[Scheduler] Error running daily 6 AM trigger: {e}")
-                
-                # Sleep 60 seconds to cross the 6:00 minute boundary safely
-                time.sleep(60)
-                
-            # Check time every 10 seconds
-            time.sleep(10)
+                        
+                        # Wait 20 seconds between running signals to strictly respect Gemini 15 RPM Free Tier limits
+                        if len(new_added) > 1:
+                            print("[Scheduler] Sleeping 20s to prevent LLM rate limits...")
+                            time.sleep(20)
+                else:
+                    print("[Scheduler] No new signals found this cycle.")
+
+            except Exception as e:
+                print(f"[Scheduler] Error running automated loop: {e}")
+            
+            # Wait 5 minutes before polling again
+            time.sleep(300)
 
     thread = threading.Thread(target=scheduler_loop, daemon=True)
     thread.start()

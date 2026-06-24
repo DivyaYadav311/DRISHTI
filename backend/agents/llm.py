@@ -84,7 +84,7 @@ def call_llm(
 
                 # Rate limit — wait and retry
                 if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                    wait = (attempt + 1) * 3  # 3s, 6s, 9s
+                    wait = (attempt + 1) * 15  # 15s, 30s, 45s
                     print(f"[LLM] Rate limited on {model_name}, waiting {wait}s (attempt {attempt + 1}/{retries})")
                     time.sleep(wait)
                     continue

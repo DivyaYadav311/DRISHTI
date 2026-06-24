@@ -77,14 +77,14 @@ No fintech startup or private bank has the customer mix to make this meaningful.
 
 The prototype is complete with the following production-ready features:
 
-### 1. Daily 6 AM Ingestion & Scheduler (`backend/scheduler.py` & `backend/ingest/crawlers.py`)
+### 1. Automated Background Loop (`backend/scheduler.py` & `backend/ingest/crawlers.py`)
 * **Real Crawlers**: Implements RSS feed parsing for the **RBI Press Releases** (`rbi.org.in`) and **IMD Weather Bulletins** (`mausam.imd.gov.in`) to fetch macroeconomic and agricultural events.
-* **Cron Daemon**: Spawns a background thread on startup that checks the clock and automatically executes the pipeline when local time hits exactly `06:00:00` daily.
+* **Auto-Polling Daemon**: Spawns a background thread on startup that polls sources every 5 minutes and automatically triggers the AI pipeline upon detecting new signals.
 
-### 2. Three-Agent LangGraph Cognitive Pipeline
+### 2. Three-Agent LangGraph Cognitive Pipeline (LLM Batch Processing)
 * **Signal Enrichment**: cleans, formats, and categorizes incoming events (agricultural, policy, scheme, economic).
-* **Relevance Engine**: Queries candidate customers in `customers.db` matching the signal profile, retrieves optimal SBI product matches from ChromaDB using Vector RAG, and ranks candidate pairs.
-* **Engagement Generation**: Writes context-aware, personalized opening messages in the customer's native tongue (Hindi, Marathi, English) optimized for the selected channel (WhatsApp, SMS, or YONO).
+* **Relevance Engine (Batched)**: Queries candidate customers in `customers.db`, retrieves optimal SBI product matches from ChromaDB using Vector RAG, and ranks candidate pairs using an optimized Batch LLM Prompt to score 10 customers in a single API call to bypass Gemini rate limits.
+* **Engagement Generation (Batched)**: Writes context-aware, personalized opening messages in the customer's native tongue (Hindi, Marathi, English) optimized for the selected channel, processing multiple messages in a single batched inference step.
 
 ### 3. Dynamic Multilingual Conversation & Language Detection
 * **Real-time Translation & Switching**: When a customer replies in a different language mid-chat (e.g. replying to Hindi in English), the LLM dynamically detects the language swap, updates the journey state, and switches its responses to match the customer's chosen tongue.
@@ -155,8 +155,8 @@ uvicorn main:app --reload --port 8000
 ### 2. Frontend React Client Setup
 In a new, separate terminal window:
 ```bash
-# Navigate to the root directory
-cd DRISHTI
+# Navigate to the frontend directory
+cd frontend
 
 # Install package dependencies
 npm install
@@ -165,8 +165,8 @@ npm install
 npm run dev
 ```
 
-* Open your browser and navigate to **[http://127.0.0.1:3000](http://127.0.0.1:3000)**.
-* Ensure both servers are running simultaneously (Backend on port `8000`, Frontend on port `3000`).
+* Open your browser and navigate to **[http://127.0.0.1:8080](http://127.0.0.1:8080)** (or the port Vite outputs).
+* Ensure both servers are running simultaneously (Backend on port `8000`, Frontend on port `8080`).
 
 ---
 

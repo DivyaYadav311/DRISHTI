@@ -11,10 +11,10 @@ from agents.rag import get_relevant_products
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "customers.db")
 
-# Max customers to score per signal (keeps demo fast)
-MAX_CUSTOMERS = 50
+# Max customers to score per signal (keeps demo fast and under free API limits)
+MAX_CUSTOMERS = 5
 # Top N after scoring to pass to engagement
-TOP_N = 20
+TOP_N = 5
 
 
 def query_customers(segment: str, region: str, district: str | None) -> list:
@@ -129,22 +129,24 @@ def _mock_customers(segment: str, region: str) -> list:
     ]
 
 
-def score_customer(customer: dict, signal: dict, products: list) -> dict | None:
+def score_customers_batch(customers: list, signal: dict, products: list) -> list:
     """
-    Uses Gemini to score a single customer against the signal and pick a product.
-    Returns scoring dict or None if should not engage.
+    Uses Gemini to score a batch of customers against the signal in a single call.
+    Returns list of scoring dicts.
     """
+    if not customers:
+        return []
+
     prompt = RELEVANCE_SCORING_PROMPT.format(
         signal_text=signal["signal_text"],
-        customer_json=json.dumps(customer, indent=2),
-        products_json=json.dumps(products, indent=2),
-        customer_id=customer["id"]
+        customers_json=json.dumps(customers, indent=2),
+        products_json=json.dumps(products, indent=2)
     )
 
     try:
         raw_text = call_llm(
             user_message=prompt,
-            max_tokens=300,
+            max_tokens=2000,
         )
 
         if raw_text.startswith("```"):
@@ -153,12 +155,14 @@ def score_customer(customer: dict, signal: dict, products: list) -> dict | None:
                 raw_text = raw_text[4:]
         raw_text = raw_text.strip()
 
-        result = json.loads(raw_text)
-        return result
+        results = json.loads(raw_text)
+        if not isinstance(results, list):
+            results = [results]
+        return results
 
     except Exception as e:
-        print(f"[RelevanceAgent] Scoring failed for {customer['id']}: {e}")
-        return None
+        print(f"[RelevanceAgent] Batch scoring failed: {e}")
+        return []
 
 
 def run_relevance_agent(state: dict) -> dict:
@@ -197,22 +201,31 @@ def run_relevance_agent(state: dict) -> dict:
 
     print(f"[RelevanceAgent] Retrieved {len(products)} relevant products from RAG")
 
-    # Step 3: Score each customer
+    # Step 3: Score customers in batches of 10
     scored = []
-
-    for customer in customers:
-        score_result = score_customer(customer, signal, products)
-
-        if score_result and score_result.get("should_engage", False):
-            # Merge customer data with score
-            merged = {
-                **customer,
-                **score_result
-            }
-            scored.append(merged)
+    
+    # We batch up to 10 customers at a time to prevent rate limits
+    BATCH_SIZE = 10
+    for i in range(0, len(customers), BATCH_SIZE):
+        batch = customers[i:i+BATCH_SIZE]
+        print(f"[RelevanceAgent] Scoring batch of {len(batch)} customers...")
+        
+        batch_results = score_customers_batch(batch, signal, products)
+        
+        # Map results back to customers by ID
+        result_map = {res.get("customer_id"): res for res in batch_results if isinstance(res, dict)}
+        
+        for customer in batch:
+            score_result = result_map.get(customer["id"])
+            if score_result and score_result.get("should_engage", False):
+                merged = {
+                    **customer,
+                    **score_result
+                }
+                scored.append(merged)
 
     # Step 4: Sort by urgency score, take top N
-    scored.sort(key=lambda x: x.get("urgency_score", 0), reverse=True)
+    scored.sort(key=lambda x: float(x.get("urgency_score", 0)), reverse=True)
     top_customers = scored[:TOP_N]
 
     print(f"[RelevanceAgent] {len(top_customers)} customers selected for engagement")
