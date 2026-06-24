@@ -206,11 +206,15 @@
   * {
     border-color: var(--color-border);
   }
+  html, body, #root {
+    height: 100%;
+  }
   html, body {
     background: var(--gradient-cockpit);
     background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow: hidden;
   }
 }

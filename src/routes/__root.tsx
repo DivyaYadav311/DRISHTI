@@ -193,15 +193,17 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SimulatorProvider>
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset className="bg-transparent">
-            <TopBar />
-            <main className="flex-1">
-              <Outlet />
-            </main>
-          </SidebarInset>
-        </SidebarProvider>
+        <div className="flex h-screen min-h-0 overflow-hidden">
+          <SidebarProvider className="flex h-screen min-h-0 w-full">
+            <AppSidebar />
+            <SidebarInset className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+              <TopBar />
+              <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+                <Outlet />
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+        </div>
       </SimulatorProvider>
     </QueryClientProvider>
   );
