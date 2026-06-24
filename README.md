@@ -9,11 +9,13 @@
 
 ## 🔍 The Problem
 
-Every banking AI built today is **reactive**: a customer opens the app, asks a question, and the bot responds. That model works for HDFC or ICICI customers who are digitally fluent and self-directed.
+Every banking AI built today is **reactive**: a customer opens the app, asks a question, and the bot responds. That model works for digitally fluent, self-directed users.
 
-It doesn't work for SBI — the bank that holds **500 million Indians**: farmers, MNREGA workers, Jan Dhan account holders, pensioners, and government employees. These customers don't ask. They wait, struggle silently, or never find out a relevant product existed until it's too late.
+It doesn't work for SBI — the bank that holds **500 million Indians**: farmers, weavers, Jan Dhan account holders, pensioners, and rural business owners. These customers don't ask. They wait, struggle silently, or never find out a relevant product existed until it's too late.
 
-SBI's customer base *is* India's economy — which means public events (monsoon forecasts, RBI policy changes, government scheme cycles) hit SBI customers first, hardest, and most predictably. No one is using that.
+SBI's customer base *is* India's economy — which means public events (monsoon forecasts, RBI interest rate changes, government scheme calendars) hit SBI customers first, hardest, and most predictably. No one is using that.
+
+---
 
 ## 💡 The Idea
 
@@ -46,133 +48,134 @@ No fintech startup or private bank has the customer mix to make this meaningful.
 
 ---
 
-## ⚙️ How It Works — End to End
-
-1. **6 AM trigger** — the World Signal Agent wakes up and pulls fresh data: IMD weather updates, RBI RSS feed, PIB scheme announcements, economic news.
-2. **Signal parsing** — each item is tagged with type, urgency, region, and affected customer segment.
-3. **Segment matching** — the Relevance Agent queries the customer base to find exactly who a signal applies to (e.g. *KCC holders in Maharashtra*).
-4. **Opportunity scoring** — Claude reasons over the customer profile + signal + SBI product catalog to pick the right product and justify why.
-5. **Engagement** — the Engagement Agent writes a personalized, multilingual message, picks the right channel (SMS / YONO / RM alert), and runs the full conversational onboarding.
-6. **Conversion** — the customer replies, the agent completes onboarding in a few turns, and the dashboard logs the outcome in real time.
-
-### Example
-> IMD forecasts 23% below-normal rainfall in Vidarbha → DRISHTI flags 847 KCC holders at repayment risk → scores PMFBY crop insurance as a 91% match → sends a Marathi SMS asking if the customer wants crop cover → customer replies "Ho" → enrollment completes in 4 messages.
->
-> **Result:** Acquisition cost ₹0. Time to conversion: 8 minutes. Risk mitigated: ₹1.4L.
-
----
-
-## 🧩 Three-Agent Architecture
+## 🧩 Architecture Overview
 
 ```
 ┌─────────────────────────────────┐
 │       WORLD SIGNAL AGENT        │
-│  IMD · RBI · PIB · NewsAPI      │
+│  IMD · RBI · PIB · NewsAPI      │ (crawlers.py / scheduler.py)
 │  Parses + tags incoming signals │
 └──────────────┬───────────────────┘
                ↓
 ┌─────────────────────────────────┐
 │     RELEVANCE MAPPING AGENT     │
-│  Signal × Customer Segment      │
+│  Signal × Customer Segment      │ (relevance_agent.py)
 │  Scores urgency + opportunity   │
 └──────────────┬───────────────────┘
                ↓
 ┌─────────────────────────────────┐
 │    ENGAGEMENT DELIVERY AGENT    │
-│  Chooses channel & tone         │
+│  Chooses channel & tone         │ (engagement_agent.py)
 │  Runs multi-turn conversation   │
 │  Hands off to RM if needed      │
 └─────────────────────────────────┘
 ```
 
-## ✨ Core Features
-
-1. **Signal Ingestion Engine** — pulls and structures live public data every morning into tagged signal objects (type, urgency, region, opportunity).
-2. **Customer Segment Matcher** — a targeting engine (not a recommender) that runs explicit queries like `account_type = KCC AND state = Maharashtra AND repayment_status = current`.
-3. **Opportunity Scorer** — Claude reasons over customer profile + signal + product catalog (grounded via RAG, no hallucination risk) to pick and justify a product.
-4. **Multilingual Engagement Agent** — writes and runs the actual outreach conversation in the customer's regional language, end to end.
-5. **Live Operations Dashboard** — a real-time view of world signals, active customer journeys, and conversion metrics.
-
 ---
 
-## 🖥️ Application Pages
+## ✨ Features Implemented
 
-| Page | What it shows |
-|---|---|
-| **Command Center** | Live world-signal feed + active journey tracker + real-time conversion metrics |
-| **Signal Intelligence** | Structured breakdown of every parsed signal; simulate new signals live |
-| **Customer Segments & Matching** | Searchable synthetic customer base with a visual segment/filter builder |
-| **Live Conversation Demo** | Phone-mockup view of an actual DRISHTI outreach conversation, in regional language |
-| **Product Catalog & Scoring** | SBI products with relevance scores tied to active signals |
-| **Impact & Analytics** | Conversion rates, cost of acquisition (₹0), risk mitigated, engagement trends |
+The prototype is complete with the following production-ready features:
+
+### 1. Daily 6 AM Ingestion & Scheduler (`backend/scheduler.py` & `backend/ingest/crawlers.py`)
+* **Real Crawlers**: Implements RSS feed parsing for the **RBI Press Releases** (`rbi.org.in`) and **IMD Weather Bulletins** (`mausam.imd.gov.in`) to fetch macroeconomic and agricultural events.
+* **Cron Daemon**: Spawns a background thread on startup that checks the clock and automatically executes the pipeline when local time hits exactly `06:00:00` daily.
+
+### 2. Three-Agent LangGraph Cognitive Pipeline
+* **Signal Enrichment**: cleans, formats, and categorizes incoming events (agricultural, policy, scheme, economic).
+* **Relevance Engine**: Queries candidate customers in `customers.db` matching the signal profile, retrieves optimal SBI product matches from ChromaDB using Vector RAG, and ranks candidate pairs.
+* **Engagement Generation**: Writes context-aware, personalized opening messages in the customer's native tongue (Hindi, Marathi, English) optimized for the selected channel (WhatsApp, SMS, or YONO).
+
+### 3. Dynamic Multilingual Conversation & Language Detection
+* **Real-time Translation & Switching**: When a customer replies in a different language mid-chat (e.g. replying to Hindi in English), the LLM dynamically detects the language swap, updates the journey state, and switches its responses to match the customer's chosen tongue.
+* **Dynamic Header Rendering**: The simulated device screen header adapts in real-time to display the active language (e.g., `SMS · English`).
+
+### 4. Interactive Device Simulator (`/simulator`)
+* Renders fully custom iOS/Android frames for WhatsApp, YONO, and SMS.
+* Features a **theme-responsive SMS chat interface** that handles light and dark mode styling with legible line-heights for Hindi and Marathi Devanagari text.
+* Displays a **live-updating clock** in the mobile status bar synced with the user's system time.
+
+### 5. Signal & Agent Canvas (`/agents`)
+* Displays the LangGraph state machine loop interactively. Clicking nodes inspects prompt templates, model versions, token throughput, and estimated costs.
+* Includes a **Copy Template** clipboard utility for prompt engineering.
+* Runs a live log streaming terminal, complete with ticking real-time local timestamps to track pipeline executions.
+
+### 6. Executive Control Room Dashboard (`/dashboard`)
+* Polls stats and customer tracker journeys dynamically using React Query every 3 seconds.
+* Merges simulated live conversations into the manager's ledger, updating key conversion counts and badges in real-time.
+* Features a **Light/Dark Mode toggle** that switches stylesheet properties across all components.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Tool |
-|---|---|
-| Multi-agent orchestration | LangGraph |
-| Reasoning & conversation | Claude API |
-| Product catalog RAG | ChromaDB |
-| Backend / API | FastAPI |
-| Frontend dashboard | React |
-| Scraping (IMD / RBI) | BeautifulSoup |
-| News signals | NewsAPI (free tier) |
-| Customer data store | SQLite (synthetic data) |
+* **Orchestration**: LangGraph, Python FastAPI, Uvicorn
+* **Model**: Google Gemini 2.0 Flash (free tier)
+* **Embeddings**: ChromaDB / Vector Search RAG
+* **Frontend**: React, TanStack Start, Tailwind v4 CSS, Lucide Icons, Shadcn Sidebar
+* **Database**: SQLite (synthetic customer data)
 
 ---
 
-## 📊 Data Sources — 100% Public, Zero PII
+## 🚀 Getting Started & Execution Instructions
 
-| Data | Source |
-|---|---|
-| Monsoon forecasts | IMD (imd.gov.in) |
-| PM-KISAN installment calendar | PM-KISAN public portal |
-| RBI policy announcements | rbi.org.in RSS feed |
-| MSP / crop price announcements | CACP / PIB press releases |
-| Economic news | NewsAPI / RSS |
-| Festival & tax calendar | Static, hardcoded |
-| Customer profiles | **Fully synthetic** — generated, not real |
+Follow these instructions to run the DRISHTI stack locally:
 
-No real customer data is used anywhere in this project. All synthetic data is generated for demo purposes only and contains no actual PII, which means there's nothing here for judges (or anyone else) to raise privacy concerns about.
-
----
-
-## 🚀 Getting Started
-
+### 1. Backend API Server Setup
 ```bash
-# clone the repo
-git clone <repo-url>
-cd drishti
-
-# backend
+# Navigate to the backend directory
 cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
 
-# frontend
-cd frontend
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows (PowerShell):
+.\venv\Scripts\activate
+# On macOS / Linux:
+# source venv/bin/activate
+
+# Install requirements
+pip install -r requirements.txt
+
+# Copy credentials template and insert your Gemini API Key
+cp .env.example .env
+# Edit .env and paste: GEMINI_API_KEY="your_api_key_here"
+
+# Load the SBI product catalog into the ChromaDB vector index
+python data/load_products.py
+
+# (Optional) Run the command line test to verify the full multi-agent pipeline:
+python run_pipeline.py
+
+# Start the FastAPI server using Uvicorn
+uvicorn main:app --reload --port 8000
+```
+
+### 2. Frontend React Client Setup
+In a new, separate terminal window:
+```bash
+# Navigate to the root directory
+cd DRISHTI
+
+# Install package dependencies
 npm install
+
+# Start the Vite development server
 npm run dev
 ```
 
-> Add your API keys (Claude API, NewsAPI) to a `.env` file before running — see `.env.example`.
+* Open your browser and navigate to **[http://127.0.0.1:3000](http://127.0.0.1:3000)**.
+* Ensure both servers are running simultaneously (Backend on port `8000`, Frontend on port `3000`).
 
 ---
 
-## 🎯 Roadmap
+## 🎯 Roadmap & Uncompleted Features
 
-- [ ] Real-time WebSocket updates for the dashboard
-- [ ] Expand product catalog beyond core 10–15 SBI products
-- [ ] Plug in live IMD/RBI/PIB feeds (currently simulated for demo)
-- [ ] Human RM handoff workflow with full context briefing
-- [ ] Multi-language expansion beyond Hindi/Marathi
+While the core pipeline and UI simulator are fully functional, the following items represent upcoming items on the roadmap:
 
----
-
-## 🏆 Why DRISHTI Wins
-
-Every other team at this hackathon builds a system that reacts to *what a customer did*. DRISHTI reasons about *what the world is doing* — and connects that, in real time, to the only customer base in India large and diverse enough for it to matter at scale.
-
-**This isn't a chatbot. It's foresight, built for the bank that needs it most.**
+- [ ] **Real-time WebSockets**: Upgrade the operations dashboard query engine from polling (every 3s) to a live WebSocket server in FastAPI to push signal alerts instantly.
+- [ ] **Human Relationship Manager (RM) Handoff Screen**: Develop the dashboard interface where a relationship manager can claim a conversation if the customer requests human assistance (e.g. clicks "Talk to RM").
+- [ ] **Bulk Signal Simulator**: Enable uploading CSV/Excel sheets of regional weather data (such as block-level rainfall logs) to trigger bulk matching for thousands of customer accounts at once.
+- [ ] **Core Banking System (CBS) Integration**: Implement OAuth API integrations simulating connections to real core banking systems to query live balances, credit scores, and land registry numbers.
+- [ ] **SMS Gateway Connector**: Bind the SMS engagement delivery agent to a real gateway (e.g., Twilio or SBI's SMS infrastructure) to route simulated alerts to actual mobile phone numbers.

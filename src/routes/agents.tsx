@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause, Cpu, Network, Send, ChevronRight, Terminal as TerminalIcon, Sparkles } from "lucide-react";
+import { Play, Pause, Cpu, Network, Send, ChevronRight, Terminal as TerminalIcon, Sparkles, Copy, Check } from "lucide-react";
 
 export const Route = createFileRoute("/agents")({
   head: () => ({
@@ -24,8 +24,8 @@ const logLines = [
   "[09:42:22] INFO  agent.relevance    → SQLite: WHERE district IN ('Amravati','Yavatmal','Akola','Beed')",
   "[09:42:22] OK    sqlite.kcc_index   ✓ 847 KCC accounts matched · avg_limit=₹1.1L",
   "[09:42:23] INFO  agent.engagement   → Selecting prompt: prompts/pmfby_marathi_v3.j2",
-  "[09:42:23] DEBUG anthropic.claude   ↪ messages.create model=claude-3-5-sonnet-20241022",
-  "[09:42:24] OK    anthropic.claude   ✓ 312 tokens in · 184 tokens out · cost ₹0.04",
+  "[09:42:23] DEBUG google.genai       ↪ generate_content model=gemini-2.0-flash",
+  "[09:42:24] OK    google.genai       ✓ 312 tokens in · 184 tokens out · cost ₹0.00 (free)",
   "[09:42:24] INFO  channel.whatsapp   → POST graph.facebook.com/v19.0/messages",
   "[09:42:25] OK    whatsapp.cloud     ✓ message_id=wamid.HBgM... · status=delivered",
   "[09:42:25] INFO  langgraph.runtime  ↩ Cycle complete · state persisted",
@@ -41,7 +41,16 @@ function Terminal() {
     if (!playing) return;
     const id = setInterval(() => {
       setLines((prev) => {
-        const next = [...prev, logLines[prev.length % logLines.length]];
+        const rawLine = logLines[prev.length % logLines.length];
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        });
+        const formattedLine = rawLine.replace(/\[\d{2}:\d{2}:\d{2}\]/, `[${timeStr}]`);
+        const next = [...prev, formattedLine];
         return next.slice(-22);
       });
     }, 700);
@@ -54,21 +63,20 @@ function Terminal() {
 
   return (
     <div className="glass-card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-2">
-        <div className="flex items-center gap-2 text-xs">
-          <TerminalIcon className="h-3.5 w-3.5 text-cyan" />
-          <span className="font-mono font-semibold">drishti@signal-parser ~ </span>
-          <span className="text-muted-foreground">python -m drishti.ingest --stream</span>
+      <div className="flex items-center justify-between border-b border-border bg-card/60 px-3 py-2">
+        <div className="flex items-center gap-2 text-xs min-w-0">
+          <TerminalIcon className="h-3.5 w-3.5 text-cyan shrink-0" />
+          <span className="font-mono font-semibold truncate text-[11px] text-foreground">drishti@sbi-loop:~</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-emerald/40 bg-emerald/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald">
-            {playing ? "Streaming" : "Paused"}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="rounded-full border border-emerald/40 bg-emerald/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald">
+            {playing ? "Live" : "Paused"}
           </span>
           <button
             onClick={() => setPlaying((p) => !p)}
-            className="grid h-7 w-7 place-items-center rounded-md border border-border bg-card text-muted-foreground hover:text-foreground"
+            className="grid h-6 w-6 place-items-center rounded border border-border bg-card text-muted-foreground hover:text-foreground cursor-pointer"
           >
-            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </button>
         </div>
       </div>
@@ -77,10 +85,10 @@ function Terminal() {
         className="h-72 overflow-y-auto bg-[oklch(0.1_0.03_252)] p-4 font-mono text-[11.5px] leading-relaxed text-emerald"
       >
         {lines.map((l, i) => (
-          <div key={i} className="whitespace-pre">
+          <div key={i} className="whitespace-pre-wrap break-words">
             <span
               className={
-                l.includes("OK") ? "text-emerald" : l.includes("DEBUG") ? "text-muted-foreground" : "text-cyan"
+                l.includes("OK") ? "text-emerald" : l.includes("DEBUG") ? "text-slate-400" : "text-cyan"
               }
             >
               {l}
@@ -110,9 +118,9 @@ const nodes: AgentNode[] = [
     subtitle: "Fetches macro data → extracts geo/economic vectors",
     prompt:
       "You are a macroeconomic signal extractor. Given raw RBI / IMD / PIB documents, output JSON: { signal_type, geography[], affected_sectors[], urgency, time_horizon }. Use ISO-3166-2 codes for Indian states.",
-    model: "claude-3-5-sonnet-20241022 + text-embedding-3-large",
+    model: "gemini-2.0-flash + ChromaDB default embeddings",
     tokens: "312 in · 184 out",
-    cost: "₹0.04 / cycle",
+    cost: "₹0.00 / cycle (free)",
   },
   {
     id: 2,
@@ -120,9 +128,9 @@ const nodes: AgentNode[] = [
     subtitle: "Cross-references vectors against SQLite indices",
     prompt:
       "Given a WorldSignal and the SBI customer index, return customer_ids whose (district, segment, product) overlap with affected_geography ∩ affected_sectors. Rank by exposure_score = balance × risk_weight.",
-    model: "claude-3-5-sonnet-20241022 (tool-calling on SQLite MCP)",
+    model: "gemini-2.0-flash (scoring on SQLite data)",
     tokens: "1,840 in · 612 out",
-    cost: "₹0.21 / cycle",
+    cost: "₹0.00 / cycle (free)",
   },
   {
     id: 3,
@@ -130,64 +138,65 @@ const nodes: AgentNode[] = [
     subtitle: "Generates localized prompts · selects channel · ships",
     prompt:
       "For each (customer, product) pair, produce a 1-2 turn message in the customer's preferred language. Match tone to segment (formal for premium, conversational for rural). Output: { channel, body, cta_options[], expected_response_schema }.",
-    model: "claude-3-5-sonnet-20241022 + WhatsApp Cloud API / SBI SMS Gateway",
+    model: "gemini-2.0-flash + WhatsApp Cloud API / SBI SMS Gateway",
     tokens: "640 in · 220 out",
-    cost: "₹0.08 / message",
+    cost: "₹0.00 / message (free)",
   },
 ];
 
 function AgentGraph({ active, setActive }: { active: number; setActive: (n: number) => void }) {
   return (
-    <div className="glass-card p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="glass-card p-5">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-bold uppercase tracking-[0.15em]">Multi-Agent Execution Loop</h3>
-          <p className="text-xs text-muted-foreground">LangGraph state machine · click a node for prompt & cost</p>
+          <h3 className="text-sm font-bold uppercase tracking-[0.15em] text-cyan">Multi-Agent Execution Loop</h3>
+          <p className="text-xs text-muted-foreground">LangGraph state machine · Select a node to inspect prompt template</p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-          <Sparkles className="h-3 w-3" /> Anthropic · LangGraph
+          <Sparkles className="h-3 w-3" /> LangGraph Pipeline
         </span>
       </div>
 
-      <div className="relative grid gap-4 md:grid-cols-3">
-        {/* connectors */}
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-px -translate-y-1/2 md:block">
-          <div className="mx-auto h-px w-[80%] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 sm:gap-4 relative">
         {nodes.map((n, i) => {
           const isActive = active === n.id;
           return (
-            <button
-              key={n.id}
-              onClick={() => setActive(n.id)}
-              className={`group relative z-10 rounded-xl border p-4 text-left transition ${
-                isActive
-                  ? "border-primary/60 bg-primary/10 glow-cyan"
-                  : "border-border bg-card/60 hover:border-primary/40"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg font-mono font-bold ${
-                    isActive ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}
-                >
-                  0{n.id}
+            <div key={n.id} className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <button
+                onClick={() => setActive(n.id)}
+                className={`flex-1 group relative z-10 rounded-xl border p-4 text-left transition duration-300 flex flex-col justify-between h-full min-h-[125px] ${
+                  isActive
+                    ? "border-primary bg-primary/10 shadow-[0_0_15px_rgba(34,211,238,0.15)] ring-1 ring-primary/30"
+                    : "border-border bg-card/40 hover:border-primary/40 hover:bg-card/70"
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg font-mono text-xs font-bold transition-all duration-300 ${
+                      isActive 
+                        ? "bg-gradient-to-br from-cyan to-primary text-primary-foreground scale-110 shadow-md" 
+                        : "bg-muted text-muted-foreground group-hover:bg-muted/80"
+                    }`}
+                  >
+                    0{n.id}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold leading-tight text-foreground">{n.title}</div>
+                    <div className="mt-1 text-[10px] text-muted-foreground leading-normal">{n.subtitle}</div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-bold">{n.title}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">{n.subtitle}</div>
+                <div className="mt-4 pt-2 border-t border-border/20 flex items-center gap-2 text-[10px] text-muted-foreground w-full">
+                  <Cpu className="h-3 w-3 text-cyan/70" />
+                  <span className="truncate font-mono">{n.tokens.split(" ")[0]} tokens</span>
+                  <span className="ml-auto rounded bg-emerald/15 px-1.5 py-0.5 font-mono text-emerald text-[9px]">{n.cost}</span>
                 </div>
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
-                <Cpu className="h-3 w-3" />
-                <span className="truncate font-mono">{n.tokens}</span>
-                <span className="ml-auto rounded bg-emerald/15 px-1.5 py-0.5 font-mono text-emerald">{n.cost}</span>
-              </div>
+              </button>
               {i < 2 && (
-                <ChevronRight className="absolute -right-3 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-primary md:block" />
+                <div className="flex items-center justify-center text-primary shrink-0 self-center">
+                  <ChevronRight className="h-4 w-4 rotate-90 sm:rotate-0" />
+                </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -196,45 +205,96 @@ function AgentGraph({ active, setActive }: { active: number; setActive: (n: numb
 }
 
 function NodeInspector({ node }: { node: AgentNode }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(node.prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="glass-card p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-border/40 pb-3">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-cyan">Node Inspector</div>
-          <h3 className="mt-1 text-xl font-bold">{node.title}</h3>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-cyan">Node Inspector</div>
+          <h3 className="mt-1 text-lg font-bold">{node.title}</h3>
         </div>
-        <div className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 font-mono text-xs text-primary">
+        <div className="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 font-mono text-xs font-semibold text-primary">
           NODE 0{node.id}
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-card/60 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Model</div>
-          <div className="mt-1 text-xs font-mono">{node.model}</div>
+      <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-3">
+        <div className="rounded-lg border border-border/50 bg-card/40 p-3">
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">LLM Engine</div>
+          <div className="mt-1 text-xs font-medium text-foreground">{node.model.split(" + ")[0]}</div>
+          <div className="text-[10px] text-muted-foreground truncate">{node.model.split(" + ")[1] || "Direct invocation"}</div>
         </div>
-        <div className="rounded-md border border-border bg-card/60 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Token Throughput</div>
-          <div className="mt-1 text-xs font-mono">{node.tokens}</div>
+        <div className="rounded-lg border border-border/50 bg-card/40 p-3">
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">I/O Throughput</div>
+          <div className="mt-1 text-xs font-mono font-semibold text-foreground">{node.tokens}</div>
         </div>
-        <div className="rounded-md border border-emerald/30 bg-emerald/5 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-emerald">Cost</div>
-          <div className="mt-1 text-xs font-mono">{node.cost}</div>
+        <div className="rounded-lg border border-emerald/20 bg-emerald/5 p-3">
+          <div className="text-[9px] uppercase tracking-wider text-emerald">Estimated Cost</div>
+          <div className="mt-1 text-xs font-mono font-bold text-emerald">{node.cost}</div>
         </div>
       </div>
 
       <div className="mt-4">
-        <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Active Prompt Template</div>
-        <pre className="overflow-x-auto rounded-md border border-border bg-[oklch(0.12_0.035_252)] p-3 font-mono text-[11.5px] leading-relaxed text-foreground/90">
-{node.prompt}
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Active Prompt Template</span>
+          <button 
+            onClick={copyPrompt}
+            className="flex items-center gap-1 text-[10px] text-cyan hover:underline transition-colors"
+          >
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied" : "Copy Template"}
+          </button>
+        </div>
+        <pre className="overflow-x-auto rounded-lg border border-border bg-[#111827] p-4 font-mono text-[11px] leading-relaxed text-slate-200 whitespace-pre-wrap">
+          {node.prompt}
         </pre>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
+      <div className="mt-4 flex flex-wrap gap-2 text-[9px]">
         {["temperature: 0.2", "max_tokens: 1024", "stream: true", "tool_choice: auto"].map((t) => (
-          <span key={t} className="rounded border border-border bg-card/60 px-2 py-1 font-mono text-muted-foreground">
+          <span key={t} className="rounded border border-border/60 bg-card/40 px-2 py-1 font-mono text-muted-foreground">
             {t}
           </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OutboundChannels() {
+  return (
+    <div className="glass-card p-5">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-cyan">
+        <Send className="h-4 w-4" /> Outbound Distribution (Last Hr)
+      </div>
+      <div className="mt-4 space-y-4">
+        {[
+          { label: "WhatsApp Cloud API", value: 184, max: 184, tone: "emerald" },
+          { label: "SBI SMS Gateway", value: 98, max: 184, tone: "cyan" },
+          { label: "YONO Push (FCM)", value: 60, max: 184, tone: "primary" },
+        ].map((b) => (
+          <div key={b.label} className="space-y-1">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-muted-foreground font-medium">{b.label}</span>
+              <span className="font-mono text-foreground font-bold">{b.value} msg</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${(b.value / b.max) * 100}%`,
+                  background: `var(--${b.tone})`,
+                }}
+              />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -244,48 +304,30 @@ function NodeInspector({ node }: { node: AgentNode }) {
 function AgentsPage() {
   const [active, setActive] = useState(1);
   const node = nodes.find((n) => n.id === active)!;
+
   return (
     <div className="space-y-6 p-6">
       <div>
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan">
-          <Network className="h-3.5 w-3.5" /> Signal Ingestion & Multi-Agent Canvas
+          <Network className="h-3.5 w-3.5" /> Cognitive Engine
         </div>
-        <h1 className="mt-1 text-3xl font-black tracking-tight">LangGraph Cognitive Pipeline</h1>
+        <h1 className="mt-1 text-3xl font-black tracking-tight">Signal & Agent Canvas</h1>
         <p className="text-sm text-muted-foreground">
-          Three specialized agents run in a directed graph — from raw macro events to in-pocket customer messages.
+          Directed LangGraph state machine flow — transforming public signals into contextual customer conversations.
         </p>
       </div>
 
-      <Terminal />
-      <AgentGraph active={active} setActive={setActive} />
-      <NodeInspector node={node} />
-
-      <div className="glass-card p-5">
-        <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.15em]">
-          <Send className="h-4 w-4 text-cyan" /> Outbound Channel Distribution (last hour)
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - Main canvas / interactive diagram and details */}
+        <div className="space-y-6 lg:col-span-2">
+          <AgentGraph active={active} setActive={setActive} />
+          <NodeInspector node={node} />
         </div>
-        <div className="mt-4 space-y-3">
-          {[
-            { label: "WhatsApp Cloud API", value: 184, tone: "emerald" },
-            { label: "SBI SMS Gateway", value: 98, tone: "cyan" },
-            { label: "YONO Push (FCM)", value: 60, tone: "primary" },
-          ].map((b) => (
-            <div key={b.label} className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">{b.label}</span>
-                <span className="font-mono">{b.value} msg</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${(b.value / 184) * 100}%`,
-                    background: `var(--${b.tone})`,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+
+        {/* Right Column - Terminal log stream and channel metrics */}
+        <div className="space-y-6">
+          <Terminal />
+          <OutboundChannels />
         </div>
       </div>
     </div>
