@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Smartphone, Zap, RefreshCw, Check, Wifi, Signal, BatteryFull, CheckCheck, Radio, Monitor } from "lucide-react";
+import { Smartphone, Zap, RefreshCw, Check, Wifi, Signal, BatteryFull, CheckCheck, Radio, Monitor, Globe } from "lucide-react";
 import { personas, type ChatTurn } from "@/lib/drishti-data";
 import { useSimulator, getPersona } from "@/lib/simulator-context";
 import { runPipeline, continueConversation as apiContinue, type Journey } from "@/lib/api-client";
@@ -36,12 +36,40 @@ const personaSignals: Record<string, { id: string; signal_text: string; source: 
     source: "RBI",
     timestamp: new Date().toISOString(),
   },
+  meena: {
+    id: "sig_pmkisan_002",
+    signal_text: "PM-KISAN 20th installment of Rs 2000 to be credited to 8.5 crore beneficiary Jan Dhan accounts on August 1, 2026.",
+    source: "PIB",
+    timestamp: new Date().toISOString(),
+  },
+  lakshmi: {
+    id: "sig_rbi_002",
+    signal_text: "RBI Monetary Policy Committee reduces repo rate by 25 basis points to 6.0%. Home loan and MSME lending rates expected to fall in 2-4 weeks.",
+    source: "RBI",
+    timestamp: new Date().toISOString(),
+  },
 };
+
+const LANGUAGES = [
+  { id: "marathi", name: "Marathi (मराठी)" },
+  { id: "hindi", name: "Hindi (हिंदी)" },
+  { id: "english", name: "English" },
+  { id: "tamil", name: "Tamil (தமிழ்)" },
+  { id: "telugu", name: "Telugu (తెలుగు)" },
+  { id: "bengali", name: "Bengali (বাংলা)" },
+  { id: "punjabi", name: "Punjabi (ਪੰਜਾਬੀ)" },
+  { id: "kannada", name: "Kannada (ಕನ್ನಡ)" },
+  { id: "gujarati", name: "Gujarati (ગુજરાતી)" },
+  { id: "malayalam", name: "Malayalam (മലയാളம்)" },
+  { id: "odia", name: "Odia (ଓଡ଼ିଆ)" },
+  { id: "assamese", name: "Assamese (অসমীয়া)" },
+  { id: "urdu", name: "Urdu (اردو)" },
+];
 
 function PersonaSelect() {
   const { personaId, setPersonaId } = useSimulator();
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-3 2xl:grid-cols-5 mt-4">
       {personas.map((p) => {
         const active = personaId === p.id;
         return (
@@ -55,8 +83,13 @@ function PersonaSelect() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{p.account}</div>
             <div className="mt-1 truncate text-sm font-bold">{p.name}</div>
             <div className="truncate text-[11px] text-muted-foreground">{p.location}</div>
-            <div className="mt-1 inline-flex items-center gap-1 rounded bg-cyan/15 px-1.5 py-0.5 font-mono text-[10px] text-cyan">
-              {p.channel}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1">
+              <span className="inline-flex items-center gap-1 rounded bg-cyan/15 px-1.5 py-0.5 font-mono text-[9px] text-cyan whitespace-nowrap">
+                {p.channel}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded bg-amber/15 px-1.5 py-0.5 font-mono text-[9px] text-amber whitespace-nowrap">
+                <Globe className="h-2 w-2" />{p.language}
+              </span>
             </div>
           </button>
         );
@@ -373,7 +406,7 @@ function ChosenBubble({ text, channel }: { text: string; channel: "WhatsApp" | "
 
 /* ─── Live Mode Bubble — renders real backend messages ─── */
 
-function LiveBubble({ msg, channel }: { msg: Journey["messages"][0]; channel: "WhatsApp" | "SMS" | "YONO Push" }) {
+function LiveBubble({ msg, channel, detectedLanguage }: { msg: Journey["messages"][0]; channel: "WhatsApp" | "SMS" | "YONO Push"; detectedLanguage?: string }) {
   const isDrishti = msg.role === "drishti";
 
   if (isDrishti) {
@@ -382,8 +415,13 @@ function LiveBubble({ msg, channel }: { msg: Journey["messages"][0]; channel: "W
         <div className="max-w-[85%] animate-[fade-in_0.3s_ease-out]">
           <div className="rounded-lg rounded-tl-sm bg-[#202c33] px-3 py-2 text-sm text-white shadow">
             {msg.text}
-            <div className="mt-1 text-right text-[9px] text-white/50">
-              {new Date(msg.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ✓✓
+            <div className="mt-1 flex items-center justify-between text-[9px] text-white/50">
+              {detectedLanguage && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#00a884]/20 px-1.5 py-0.5 text-[8px] font-medium text-[#00a884]">
+                  <Globe className="h-2 w-2" />{detectedLanguage.charAt(0).toUpperCase() + detectedLanguage.slice(1)}
+                </span>
+              )}
+              <span>{new Date(msg.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} ✓✓</span>
             </div>
           </div>
           {msg.text_english !== msg.text && (
@@ -515,6 +553,8 @@ function ChatPanel() {
     setLoading,
     backendError,
     setBackendError,
+    selectedLanguage,
+    setSelectedLanguage,
   } = useSimulator();
   const p = getPersona(personaId);
   const [pulse, setPulse] = useState(false);
@@ -547,7 +587,10 @@ function ChatPanel() {
       setBackendError(null);
       setStarted(true);
       try {
-        const signal = personaSignals[personaId];
+        const signal = {
+          ...personaSignals[personaId],
+          language_override: selectedLanguage,
+        };
         const result = await runPipeline(signal);
         if (result.journeys.length > 0) {
           setLiveJourney(result.journeys[0]);
@@ -577,10 +620,29 @@ function ChatPanel() {
             {liveMode ? "⚡ Live AI Mode" : "📺 Demo Mode"} · Device Simulator
           </div>
           <h2 className="mt-1 text-xl font-bold">
-            {p.channel} · {liveMode && liveJourney?.customer_language ? (liveJourney.customer_language.charAt(0).toUpperCase() + liveJourney.customer_language.slice(1)) : p.language}
+            {p.channel} · {liveMode && liveJourney?.customer_language ? (liveJourney.customer_language.charAt(0).toUpperCase() + liveJourney.customer_language.slice(1)) : (selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1))}
           </h2>
         </div>
         <div className="flex items-center gap-2">
+          {/* Language Selector */}
+          <div className="relative inline-flex items-center">
+            <Globe className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="rounded-md border border-border bg-card pl-8 pr-8 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground outline-none cursor-pointer appearance-none transition focus:border-primary/50"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.id} value={lang.id} className="bg-card text-foreground">
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-2.5 pointer-events-none text-muted-foreground">
+              <span className="text-[8px]">▼</span>
+            </div>
+          </div>
+
           {/* Mode toggle */}
           <button
             onClick={() => {
@@ -615,6 +677,14 @@ function ChatPanel() {
         </div>
       </div>
 
+      {/* Demo Mode warning if language is overridden */}
+      {!liveMode && selectedLanguage !== p.language.toLowerCase() && (
+        <div className="mb-4 rounded-md border border-amber/30 bg-amber/10 px-3 py-2 text-[11px] text-amber flex items-center gap-1.5 animate-fadeIn">
+          <Zap className="h-3.5 w-3.5 shrink-0" />
+          <span>Demo Mode runs a pre-recorded thread. Toggle <strong>Live AI</strong> to generate outreach in {LANGUAGES.find(l => l.id === selectedLanguage)?.name.split(" ")[0]}.</span>
+        </div>
+      )}
+
       {/* Backend error */}
       {backendError && (
         <div className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
@@ -628,7 +698,13 @@ function ChatPanel() {
 
       <div className={`transition ${pulse ? "scale-[0.98]" : ""}`}>
         <PhoneFrame
-          channel={`${p.channel} · ${liveMode && liveJourney?.customer_language ? (liveJourney.customer_language.charAt(0).toUpperCase() + liveJourney.customer_language.slice(1)) : p.language}`}
+          channel={`${p.channel} · ${
+            liveMode
+              ? (liveJourney?.customer_language
+                  ? liveJourney.customer_language.charAt(0).toUpperCase() + liveJourney.customer_language.slice(1)
+                  : selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1))
+              : (selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1))
+          }`}
           channelType={p.channel}
         >
           <Shell name={p.name}>
@@ -655,7 +731,7 @@ function ChatPanel() {
             {started && liveMode && liveJourney && (
               <>
                 {liveJourney.messages.map((msg, idx) => (
-                  <LiveBubble key={idx} msg={msg} channel={p.channel} />
+                  <LiveBubble key={idx} msg={msg} channel={p.channel} detectedLanguage={liveJourney.customer_language} />
                 ))}
               </>
             )}

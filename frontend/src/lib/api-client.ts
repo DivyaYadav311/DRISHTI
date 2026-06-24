@@ -13,6 +13,7 @@ export interface RawSignal {
   signal_text: string;
   source: string;
   timestamp: string;
+  language_override?: string;
 }
 
 export interface JourneyMessage {

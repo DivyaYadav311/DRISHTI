@@ -19,6 +19,8 @@ type SimState = {
   setLoading: (b: boolean) => void;
   backendError: string | null;
   setBackendError: (e: string | null) => void;
+  selectedLanguage: string;
+  setSelectedLanguage: (lang: string) => void;
 };
 
 const Ctx = createContext<SimState | null>(null);
@@ -31,9 +33,14 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
   const [liveJourney, setLiveJourney] = useState<Journey | null>(null);
   const [loading, setLoading] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("marathi");
 
   const setPersonaId = (id: Persona["id"]) => {
     setPersonaIdState(id);
+    const p = personas.find((x) => x.id === id);
+    if (p) {
+      setSelectedLanguage(p.language.toLowerCase());
+    }
     setStep(0);
     setStarted(false);
     setLiveJourney(null);
@@ -64,6 +71,8 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
         setLoading,
         backendError,
         setBackendError,
+        selectedLanguage,
+        setSelectedLanguage,
       }}
     >
       {children}

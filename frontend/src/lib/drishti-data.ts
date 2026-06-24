@@ -94,7 +94,7 @@ export const customers: Customer[] = [
 ];
 
 export type Persona = {
-  id: "ramesh" | "sunita" | "priya";
+  id: "ramesh" | "sunita" | "priya" | "meena" | "lakshmi";
   name: string;
   age: number;
   role: string;
@@ -275,6 +275,112 @@ export const personas: Persona[] = [
         text: "✅ Refinance booked. Ref RFI/PUN/2026/44218. ₹5,00,000 top-up credited. New rate effective next billing cycle.",
         confirm: true,
         meta: "Conversion ₹1.8 L value · Dashboard updated",
+      },
+    ],
+  },
+  {
+    id: "meena",
+    name: "Meena Yadav",
+    age: 38,
+    role: "Daily Wage Worker",
+    location: "Varanasi, Uttar Pradesh",
+    language: "Hindi",
+    account: "Jan Dhan (PMJDY)",
+    balance: "₹1,600",
+    creditScore: 0,
+    channel: "WhatsApp",
+    trigger: { source: "PIB Notification", title: "PM-KISAN 20th installment ₹2,000 credited" },
+    vitals: [
+      { label: "Account Age", value: "2.8 years" },
+      { label: "Avg Balance", value: "₹1,200" },
+      { label: "RuPay Card", value: "Active" },
+      { label: "DBT Linked", value: "Aadhaar ✓" },
+    ],
+    txns: [
+      { date: "Today", desc: "PM-KISAN DBT credit", amount: "+₹2,000" },
+      { date: "10 Jun", desc: "Labour payment", amount: "+₹800" },
+      { date: "05 Jun", desc: "Mobile recharge", amount: "−₹199" },
+      { date: "01 Jun", desc: "Ration cash withdrawal", amount: "−₹400" },
+    ],
+    thread: [
+      {
+        from: "drishti",
+        text: "नमस्ते मीना जी 🙏 आपके खाते में ₹2,000 PM-KISAN की राशि आई है। इसका एक हिस्सा ₹100/माह RD में लगाएं — 6.7% ब्याज, 1 साल में ₹1,242 अतिरिक्त मिलेंगे। क्या आप शुरू करना चाहेंगी?",
+        meta: "Hindi · WhatsApp · Micro-RD hook · token cost ₹0.03",
+      },
+      {
+        from: "customer",
+        text: "(awaiting reply)",
+        options: ["हाँ, शुरू करें", "अभी नहीं"],
+      },
+      {
+        from: "drishti",
+        text: "बहुत अच्छा! ₹100/माह RD — हर महीने 5 तारीख को ऑटो-डेबिट होगा। 1 साल बाद ₹1,242 मिलेंगे। पक्का करें?",
+        meta: "Conditional response · structured JSON",
+      },
+      {
+        from: "customer",
+        text: "(awaiting reply)",
+        options: ["हाँ, पक्का करें ✓", "RM से बात करें"],
+      },
+      {
+        from: "drishti",
+        text: "✅ RD खुल गई! खाता क्र. RD-UP-993847। हर माह 5 तारीख को ₹100 ऑटो-डेबिट। मेच्योरिटी पर ₹1,242 मिलेंगे।",
+        confirm: true,
+        meta: "RD opened · ₹100 locked · Dashboard +1 conversion",
+      },
+    ],
+  },
+  {
+    id: "lakshmi",
+    name: "Lakshmi Iyer",
+    age: 48,
+    role: "Government Employee",
+    location: "Chennai, Tamil Nadu",
+    language: "Tamil",
+    account: "Premium Home Loan",
+    balance: "Outstanding ₹42,00,000 @ 9.10%",
+    creditScore: 820,
+    channel: "WhatsApp",
+    trigger: { source: "RBI MPC", title: "Repo rate cut 25bps → home loan refinance eligible" },
+    vitals: [
+      { label: "EMI", value: "₹39,800 /mo" },
+      { label: "Tenure Left", value: "15 yr 8 mo" },
+      { label: "CIBIL", value: "820" },
+      { label: "Salary Credit", value: "₹1.8 L /mo" },
+    ],
+    txns: [
+      { date: "Today", desc: "Salary credit — Tamil Nadu Govt", amount: "+₹1,80,000" },
+      { date: "05 Jun", desc: "Home loan EMI", amount: "−₹39,800" },
+      { date: "02 Jun", desc: "LIC premium", amount: "−₹12,000" },
+      { date: "28 May", desc: "Mutual fund SIP", amount: "−₹15,000" },
+    ],
+    thread: [
+      {
+        from: "drishti",
+        text: "வணக்கம் லட்சுமி அம்மா 🙏 RBI இன்று ரெப்போ விகிதத்தை 25 bps குறைத்துள்ளது. உங்கள் வீட்டுக் கடன் 8.60% க்கு refinance செய்யலாம் — மாதம் ₹1,640 சேமிக்கலாம். விவரங்கள் பார்க்கலாமா?",
+        meta: "Tamil · WhatsApp · Refi hook · token cost ₹0.04",
+      },
+      {
+        from: "customer",
+        text: "(awaiting reply)",
+        options: ["விவரம் காட்டுங்கள்", "வேண்டாம்"],
+      },
+      {
+        from: "drishti",
+        text: "பழைய EMI ₹39,800 → புதிய EMI ₹38,160. Processing fee தள்ளுபடி (Premium tier). ₹3 L top-up pre-approved. Aadhaar e-Sign செய்யலாமா?",
+        meta: "Structured offer JSON · zero-touch flow",
+      },
+      {
+        from: "customer",
+        text: "(awaiting reply)",
+        options: ["e-Sign செய்யுங்கள் ✓", "RM-உடன் பேசுங்கள்"],
+      },
+      {
+        from: "drishti",
+        text: "✅ Refinance பதிவு முடிந்தது! Ref RFI/CHN/2026/55192. புதிய வட்டி 8.60% அடுத்த billing cycle முதல் பொருந்தும்.",
+        confirm: true,
+        meta: "Conversion ₹2.4 L value · Dashboard updated",
       },
     ],
   },
