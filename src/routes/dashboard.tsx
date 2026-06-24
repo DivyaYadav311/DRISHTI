@@ -13,6 +13,9 @@ import {
   Filter,
 } from "lucide-react";
 import { customers, signals, indianStates, productTypes, type Signal } from "@/lib/drishti-data";
+import { useQuery } from "@tanstack/react-query";
+import { fetchStats, fetchJourneys } from "@/lib/api-client";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -46,12 +49,14 @@ const urgencyTone = {
   Info: "bg-cyan/15 text-cyan border-cyan/30",
 } as const;
 
-const statusTone = {
+const statusTone: Record<string, string> = {
   "Awaiting Reply": "bg-amber/15 text-amber border-amber/30",
   "In-Thread Chatting": "bg-primary/15 text-primary border-primary/30",
   Converted: "bg-emerald/15 text-emerald border-emerald/30",
   "RM Escalated": "bg-destructive/15 text-destructive border-destructive/40",
-} as const;
+  Dropped: "bg-muted text-muted-foreground border-border",
+};
+
 
 function MiniSpark({ values, tone = "primary" }: { values: number[]; tone?: "primary" | "emerald" | "amber" | "cyan" }) {
   const max = Math.max(...values);
@@ -167,15 +172,91 @@ function DashboardPage() {
   const [productFilter, setProductFilter] = useState("All Products");
   const [selected, setSelected] = useState<string | null>(null);
 
+  // Fetch stats and journeys dynamically from backend API
+  const { data: stats } = useQuery({
+    queryKey: ["backend-stats"],
+    queryFn: fetchStats,
+    refetchInterval: 3000,
+  });
+
+  const { data: journeysData } = useQuery({
+    queryKey: ["backend-journeys"],
+    queryFn: fetchJourneys,
+    refetchInterval: 3000,
+  });
+
+  // Map live backend journeys to customer objects
+  const liveCustomers = useMemo(() => {
+    if (!journeysData?.journeys) return [];
+    
+    return journeysData.journeys.map((j) => {
+      const statusMap: Record<string, string> = {
+        pending: "Awaiting Reply",
+        active: "In-Thread Chatting",
+        converted: "Converted",
+        dropped: "Dropped",
+      };
+      
+      const channelMap: Record<string, string> = {
+        sms: "SMS",
+        yono: "YONO Push",
+        rm_alert: "WhatsApp",
+      };
+
+      const segmentMap: Record<string, string> = {
+        KCC: "KCC",
+        jan_dhan: "Jan Dhan",
+        home_loan: "Home Loan",
+        MSME: "Business",
+        salary: "Salary",
+      };
+
+      const matchedMock = customers.find((c) => c.name.toLowerCase() === j.customer_name.toLowerCase());
+      
+      return {
+        id: j.journey_id,
+        name: j.customer_name,
+        segment: segmentMap[j.product_details?.target_segment as string] || matchedMock?.segment || "KCC",
+        state: j.customer_state,
+        hook: j.signal_type === "agricultural" ? "IMD Drought Alert" : j.signal_type === "policy" ? "RBI Repo Cut" : "Live AI Trigger",
+        channel: (channelMap[j.channel] || matchedMock?.channel || "WhatsApp") as any,
+        status: (statusMap[j.status] || "Awaiting Reply") as any,
+        product: j.product_name,
+        value: matchedMock?.value || `₹${Math.round(j.urgency_score * 4000 + 1000).toLocaleString("en-IN")}`,
+      };
+    });
+  }, [journeysData]);
+
+  // Merge live backend customers and static mock customers, de-duplicating by name
+  const allCustomers = useMemo(() => {
+    const liveNames = new Set(liveCustomers.map((c) => c.name.toLowerCase()));
+    const remainingStatic = customers.filter((c) => !liveNames.has(c.name.toLowerCase()));
+    return [...liveCustomers, ...remainingStatic];
+  }, [liveCustomers]);
+
   const filtered = useMemo(
     () =>
-      customers.filter(
+      allCustomers.filter(
         (c) =>
           (stateFilter === "All India" || c.state === stateFilter) &&
           (productFilter === "All Products" || c.segment === productFilter),
       ),
-    [stateFilter, productFilter],
+    [allCustomers, stateFilter, productFilter],
   );
+
+  // Calculate live converted value
+  const liveConvertedValue = useMemo(() => {
+    if (!journeysData?.journeys) return 0;
+    return journeysData.journeys
+      .filter((j) => j.status === "converted")
+      .reduce((acc, j) => {
+        const c = liveCustomers.find((x) => x.id === j.journey_id);
+        if (!c) return acc;
+        const num = parseFloat(c.value.replace(/[^0-9.]/g, ""));
+        return acc + (isNaN(num) ? 0 : num);
+      }, 0);
+  }, [journeysData, liveCustomers]);
+
 
   return (
     <div className="space-y-6 p-6">
@@ -201,7 +282,7 @@ function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
           label="Active World Signals Tracked"
-          value="4 Active"
+          value={`${Math.max(4, journeysData?.total || 0)} Active`}
           sub="IMD · RBI · PIB · Budget"
           tone="emerald"
           icon={CloudRain}
@@ -210,7 +291,7 @@ function DashboardPage() {
         />
         <Metric
           label="Targeted Cross-Segment Customers"
-          value="14,837"
+          value={(14837 + (stats?.total_journeys || 0)).toLocaleString("en-IN")}
           sub="Zero acquisition cost"
           tone="primary"
           icon={Users}
@@ -218,7 +299,7 @@ function DashboardPage() {
         />
         <Metric
           label="Active AI Conversations"
-          value="342"
+          value={(342 + (stats?.active_conversations || 0)).toString()}
           sub="WhatsApp · YONO · SMS"
           tone="cyan"
           icon={MessageSquare}
@@ -226,7 +307,7 @@ function DashboardPage() {
         />
         <Metric
           label="Completed Value Conversions"
-          value="₹12.4 L"
+          value={`₹${(12.4 + (liveConvertedValue > 0 ? liveConvertedValue / 100000 : (stats?.converted || 0) * 0.1)).toFixed(2)} L`}
           sub="Risk mitigated + deposits locked"
           tone="amber"
           icon={TrendingUp}
@@ -331,7 +412,7 @@ function DashboardPage() {
           </div>
 
           {selected && (() => {
-            const c = customers.find((x) => x.id === selected)!;
+            const c = allCustomers.find((x) => x.id === selected)!;
             return (
               <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <div className="flex items-center justify-between">
