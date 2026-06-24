@@ -50,6 +50,7 @@ class SignalInput(BaseModel):
     signal_text: str
     source: str
     timestamp: str
+    language_override: Optional[str] = None
 
 
 class ConversationInput(BaseModel):
@@ -60,6 +61,7 @@ class ConversationInput(BaseModel):
 class CustomSignalInput(BaseModel):
     signal_text: str
     source: Optional[str] = "CUSTOM"
+    language_override: Optional[str] = None
 
 
 # ─── Startup ──────────────────────────────────────────────────
@@ -229,6 +231,7 @@ def simulate_signal(input: CustomSignalInput):
         "signal_text": input.signal_text,
         "source": input.source,
         "timestamp": datetime.now().isoformat(),
+        "language_override": input.language_override,
     }
 
     result = run_pipeline(raw_signal)

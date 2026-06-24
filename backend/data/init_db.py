@@ -34,14 +34,14 @@ STATES = {
 LANGUAGE_MAP = {
     "Maharashtra": "marathi",
     "Uttar Pradesh": "hindi",
-    "Punjab": "hindi",
+    "Punjab": "punjabi",
     "Tamil Nadu": "tamil",
-    "West Bengal": "hindi",
-    "Karnataka": "english",
-    "Gujarat": "hindi",
+    "West Bengal": "bengali",
+    "Karnataka": "kannada",
+    "Gujarat": "gujarati",
     "Rajasthan": "hindi",
     "Madhya Pradesh": "hindi",
-    "Kerala": "english",
+    "Kerala": "malayalam",
 }
 
 ACCOUNT_TYPES = [
@@ -140,7 +140,7 @@ NAMED_CUSTOMERS = [
     },
     {
         "id": "cust_0006", "name": "Vikram Shetty", "age": 45,
-        "state": "Karnataka", "district": "Bengaluru", "language": "english",
+        "state": "Karnataka", "district": "Bengaluru", "language": "kannada",
         "account_types": json.dumps(["MSME", "savings"]),
         "kcc_limit": 0, "loan_amount": 1200000,
         "income_bracket": "high", "repayment_status": "clean",

@@ -47,6 +47,8 @@ Analyze this signal and return the structured JSON.
         enriched["source"] = raw.get("source", "unknown")
         enriched["timestamp"] = raw.get("timestamp", "")
         enriched["raw_text"] = raw.get("signal_text", "")
+        if "language_override" in raw:
+            enriched["language_override"] = raw["language_override"]
 
         print(f"[SignalAgent] Enriched signal: {enriched['type']} | "
               f"Segment: {enriched['affected_segment']} | "

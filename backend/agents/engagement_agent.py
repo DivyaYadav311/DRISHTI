@@ -16,7 +16,13 @@ LANGUAGE_DISPLAY = {
     "telugu": "Telugu",
     "bengali": "Bengali",
     "punjabi": "Punjabi",
-    "english": "English"
+    "english": "English",
+    "kannada": "Kannada",
+    "gujarati": "Gujarati",
+    "malayalam": "Malayalam",
+    "odia": "Odia",
+    "assamese": "Assamese",
+    "urdu": "Urdu",
 }
 
 
@@ -29,9 +35,13 @@ def generate_opening_messages_batch(customers: list, signal: dict, products_map:
         return []
 
     # Prepare lightweight customer data for prompt
+    lang_override = signal.get("language_override")
+    if lang_override:
+        lang_override = lang_override.lower()
+
     customers_data = []
     for c in customers:
-        lang = c.get("language", "hindi")
+        lang = lang_override if lang_override else c.get("language", "hindi")
         product_id = c.get("recommended_product", "")
         product = products_map.get(product_id, {})
         
@@ -144,11 +154,15 @@ def run_engagement_agent(state: dict) -> dict:
                 "message_english": f"Hello {customer.get('name', '')}. Would you like to know about our new offer?"
             }
 
+        lang_override = signal.get("language_override")
+        if lang_override:
+            lang_override = lang_override.lower()
+
         journey = {
             "journey_id": f"j_{uuid.uuid4().hex[:8]}",
             "customer_id": customer["id"],
             "customer_name": customer.get("name", ""),
-            "customer_language": customer.get("language", "hindi"),
+            "customer_language": lang_override if lang_override else customer.get("language", "hindi"),
             "customer_state": customer.get("state", ""),
             "customer_district": customer.get("district", ""),
             "signal_id": signal.get("id", ""),

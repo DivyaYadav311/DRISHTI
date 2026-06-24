@@ -77,7 +77,7 @@ Rules for writing messages:
 - Sound like a caring bank employee, not a marketing robot
 - Reference the world event naturally
 - End with exactly ONE yes/no question
-- Use respectful address: ji for Hindi/Marathi, sir/madam for English
+- Use respectful address: ji for Hindi/Marathi/Gujarati/Punjabi/Bengali, sir/madam for English, anna/akka for Kannada/Tamil/Telugu/Malayalam
 - If SMS channel: keep under 160 characters total
 - If YONO: can be slightly longer, warmer
 - MUST be written in the specified "language" for each customer
@@ -106,15 +106,15 @@ Conversation so far:
 
 Customer's latest reply: "{customer_reply}"
 
-Analyze the customer's latest reply to detect which language they are using (e.g., Hindi, English, Marathi, Tamil, Telugu, Bengali, Punjabi).
+Analyze the customer's latest reply to detect which language they are using (e.g., Hindi, English, Marathi, Tamil, Telugu, Bengali, Punjabi, Kannada, Gujarati, Malayalam, Odia, Assamese, Urdu).
 Respond in that detected language. If the customer's reply is in a different language from {language}, switch to that new language and respond in it. If the customer's reply is short/ambiguous (like "yes", "ok", "no"), reply in the active language of the conversation ({language}).
 Keep it brief (2-3 sentences max).
 
 Decision rules:
-- If customer says yes / haan / aam / ha / okay / sure → confirm enrollment, give next step
-- If customer asks about cost / price / kitna → explain simply with actual numbers
-- If customer asks about risk / khatara → reassure with government backing if applicable
-- If customer declines / na / no / nahi → accept gracefully, say you'll note it for later
+- If customer says yes / haan / aam / ha / okay / sure / howdu / haa / aama / avunu / hya → confirm enrollment, give next step
+- If customer asks about cost / price / kitna / eshtu / ketla / evvalavu / koto → explain simply with actual numbers
+- If customer asks about risk / khatara / jokhim / apaaya → reassure with government backing if applicable
+- If customer declines / na / no / nahi / illa / nako / beda / vendam → accept gracefully, say you'll note it for later
 - If customer is confused → simplify with an analogy
 
 Return ONLY JSON:
@@ -123,7 +123,7 @@ Return ONLY JSON:
   "message_english": "English translation of the message",
   "status": "active | converted | dropped",
   "next_action": "what happens next for the bank (internal note)",
-  "detected_language": "the lowercase name of the language you responded in (e.g., english, hindi, marathi, tamil, telugu, bengali, punjabi)"
+  "detected_language": "the lowercase name of the language you responded in (e.g., english, hindi, marathi, tamil, telugu, bengali, punjabi, kannada, gujarati, malayalam, odia, assamese, urdu)"
 }}
 
 Status rules:
