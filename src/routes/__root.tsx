@@ -7,14 +7,14 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SimulatorProvider } from "@/lib/simulator-context";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Sun, Moon } from "lucide-react";
 
 function NotFoundComponent() {
   return (
@@ -83,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
       },
     ],
   }),
@@ -107,13 +107,61 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function LiveClock() {
+  const [time, setTime] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+      });
+      const timeStr = now.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      setTime(`${dateStr} · IST ${timeStr}`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span className="font-mono uppercase tracking-[0.18em]">Live · {time}</span>;
+}
+
 function TopBar() {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      return document.documentElement.classList.contains("light") ? "light" : "dark";
+    }
+    return "dark";
+  });
+
+  useEffect(() => {
+    if (theme === "light") {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+      document.documentElement.classList.add("dark");
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  };
+
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/70 px-4 backdrop-blur-xl">
       <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
       <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
         <span className="inline-flex h-2 w-2 rounded-full bg-emerald pulse-dot text-emerald" />
-        <span className="font-mono uppercase tracking-[0.18em]">Live · IST 09:42:18</span>
+        <LiveClock />
       </div>
       <div className="ml-auto flex items-center gap-2">
         <div className="hidden md:flex items-center gap-2 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground">
@@ -121,6 +169,13 @@ function TopBar() {
           <span>Search customers, signals, accounts…</span>
           <kbd className="ml-4 rounded bg-muted px-1.5 py-0.5 text-[10px]">⌘K</kbd>
         </div>
+        <button
+          onClick={toggleTheme}
+          className="grid h-9 w-9 place-items-center rounded-md border border-border bg-card/60 text-muted-foreground hover:text-foreground transition-colors"
+          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-primary" />}
+        </button>
         <button className="grid h-9 w-9 place-items-center rounded-md border border-border bg-card/60 text-muted-foreground hover:text-foreground">
           <Bell className="h-4 w-4" />
         </button>

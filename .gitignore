@@ -30,3 +30,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backend / Python
+backend/.env
+backend/venv/
+backend/chroma_db/
+backend/__pycache__/
+backend/agents/__pycache__/
+__pycache__/
+*.pyc
+.env
+
+# Extracted zip
+drishti_person1_extracted/
